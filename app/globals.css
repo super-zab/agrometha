@@ -2,26 +2,405 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------------------------------------------------------------------------
+   Tokens — miroir CSS de la palette Tailwind (voir tailwind.config.ts).
+   Mode clair dominant : le vert profond et le noir sont des accents.
+--------------------------------------------------------------------------- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --canvas: #f7f8f4;
+  --canvas-alt: #eef2ea;
+  --canvas-veil: #e4ede2;
+  --surface: #ffffff;
+
+  --ink: #0a0f0c;
+  --ink-soft: #37443c;
+  --ink-mute: #6e7d73;
+
+  --forest: #14372a;
+  --agro: #4a7c4e;
+  --agro-pale: #cfe0cc;
+
+  --volt: #12be85;
+  --volt-soft: #5fe0b0;
+  --volt-pale: #c9f5e4;
+
+  --amber: #d89a3f;
+  --amber-deep: #9e6519;
+
+  --line: #d7e0d4;
+  --line-strong: #b4c4b2;
+
+  /* Largeur de l'axe variable de la police display (bold condensé). */
+  --display-wdth: 78;
+
+  --cursor-x: -100px;
+  --cursor-y: -100px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--canvas);
+  color-scheme: light;
+}
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--ink-soft);
+  background: var(--canvas);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--volt-pale);
+  color: var(--forest);
+}
+
+/*
+ * Grain très discret.
+ * PERF : surtout pas de `mix-blend-mode` ici. Un overlay `fixed` plein écran en
+ * blend mode force le compositeur à refusionner toute la page à chaque frame de
+ * scroll — c'était le premier facteur de saccade du site. Un simple calque
+ * opaque à très faible opacité est peint une fois et ne coûte plus rien.
+ */
+body::before {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  opacity: 0.022;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@media (pointer: fine) {
+  html.has-custom-cursor,
+  html.has-custom-cursor * {
+    cursor: none !important;
+  }
+
+  html.has-custom-cursor input,
+  html.has-custom-cursor textarea,
+  html.has-custom-cursor select,
+  html.has-custom-cursor input *,
+  html.has-custom-cursor textarea * {
+    cursor: text !important;
+  }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Display bold condensé — l'axe wdth de la police variable. */
+  .text-display {
+    font-family: var(--font-display), system-ui, sans-serif;
+    font-weight: 800;
+    font-variation-settings: "wdth" var(--display-wdth);
+    font-stretch: 78%;
+    letter-spacing: -0.025em;
+    line-height: 0.88;
+    text-transform: none;
+  }
+
+  .text-display-wide {
+    --display-wdth: 92;
+  }
+
+  /*
+   * Glassmorphism léger.
+   * PERF : pas de `backdrop-filter`. Les fonds de section sont des aplats, donc
+   * flouter l'arrière-plan ne produisait quasiment aucun effet visible tout en
+   * coûtant une passe de flou par élément (~15 sur la page). Un dégradé blanc
+   * semi-opaque rend la même chose pour zéro coût de composition.
+   * `.glass-blur` reste disponible pour les rares cas posés sur un halo.
+   */
+  .glass {
+    background: linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.88) 0%,
+      rgba(255, 255, 255, 0.66) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow:
+      0 1px 0 0 rgba(255, 255, 255, 0.7) inset,
+      0 12px 40px -18px rgba(10, 15, 12, 0.22);
+  }
+
+  .glass-blur {
+    backdrop-filter: blur(12px) saturate(1.15);
+    -webkit-backdrop-filter: blur(12px) saturate(1.15);
+  }
+
+  .glass-line {
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.72);
+  }
+
+  /* Halos de lumière — biogaz (chaud) / électricité (froid). */
+  .halo-volt {
+    background: radial-gradient(
+      circle at center,
+      rgba(18, 190, 133, 0.28) 0%,
+      rgba(18, 190, 133, 0.08) 45%,
+      transparent 70%
+    );
+  }
+
+  .halo-amber {
+    background: radial-gradient(
+      circle at center,
+      rgba(216, 154, 63, 0.3) 0%,
+      rgba(216, 154, 63, 0.08) 45%,
+      transparent 70%
+    );
+  }
+
+  .halo-agro {
+    background: radial-gradient(
+      circle at center,
+      rgba(74, 124, 78, 0.22) 0%,
+      rgba(74, 124, 78, 0.06) 50%,
+      transparent 72%
+    );
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Effets typographiques du hero — « De déchets à énergie »
+--------------------------------------------------------------------------- */
+
+/*
+ * « déchets » : remplissage granulaire, matière organique.
+ *
+ * IMPORTANT : cette classe est posée sur CHAQUE lettre, pas sur le mot entier.
+ * Un `transform` sur un enfant casse le `background-clip: text` du parent (la
+ * lettre transformée est peinte dans son propre calque, hors du clip) — le mot
+ * ressortait alors entièrement transparent, donc invisible. En clippant lettre
+ * par lettre, chaque lettre porte son propre fond et peut être animée.
+ *
+ * Le dégradé de base est donc VERTICAL : il se répète à l'identique sur chaque
+ * lettre, ce qui reste cohérent, là où un dégradé oblique se serait vu couper.
+ */
+.word-waste {
+  background-image:
+    radial-gradient(circle at 32% 28%, rgba(10, 15, 12, 0.62) 0.85px, transparent 1.15px),
+    radial-gradient(circle at 74% 68%, rgba(158, 101, 25, 0.6) 0.7px, transparent 1px),
+    radial-gradient(circle at 12% 82%, rgba(45, 32, 18, 0.45) 0.6px, transparent 0.95px),
+    radial-gradient(circle at 55% 12%, rgba(94, 66, 28, 0.35) 0.5px, transparent 0.85px),
+    linear-gradient(180deg, #2a1d12 0%, #5d4119 42%, #9e6519 74%, #c98a3a 100%);
+  background-size:
+    7px 7px,
+    5px 5px,
+    9px 9px,
+    11px 11px,
+    100% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* « énergie » : courant qui traverse le texte. */
+.word-energy {
+  background-image: linear-gradient(
+    100deg,
+    #14372a 0%,
+    #0a8c61 20%,
+    #12be85 36%,
+    #7df2c6 50%,
+    #12be85 64%,
+    #0a8c61 80%,
+    #14372a 100%
+  );
+  background-size: 220% 100%;
+  background-position: 0% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: am-sweep 7s linear infinite;
+}
+
+/* Contour qui « s'allume » — révélé de gauche à droite au scroll (--lit). */
+.word-energy-stroke {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 1.1px var(--volt-soft);
+  clip-path: inset(0 calc(100% - var(--lit, 0%)) 0 0);
+}
+
+/* Halo diffus derrière « énergie » (--glow pilote l'intensité). */
+.word-energy-glow {
+  color: var(--volt);
+  filter: blur(22px);
+  opacity: var(--glow, 0);
+}
+
+@keyframes am-sweep {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 220% 50%;
+  }
+}
+
+@keyframes am-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes am-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes am-rise {
+  0% {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-46px);
+    opacity: 0;
+  }
+}
+
+@keyframes am-fall {
+  0% {
+    transform: translateY(-4px) scale(1);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.75;
+  }
+  100% {
+    transform: translateY(42px) scale(0.6);
+    opacity: 0;
+  }
+}
+
+@keyframes am-flow {
+  to {
+    stroke-dashoffset: -120;
+  }
+}
+
+@keyframes am-trace {
+  to {
+    stroke-dashoffset: -1400;
+  }
+}
+
+.am-pulse {
+  animation: am-pulse 4.5s ease-in-out infinite;
+}
+
+.am-float {
+  animation: am-float 7s ease-in-out infinite;
+}
+
+.am-rise {
+  animation: am-rise 4s ease-in-out infinite;
+}
+
+.am-fall {
+  animation: am-fall 3.2s ease-in infinite;
+}
+
+.am-flow {
+  stroke-dasharray: 6 10;
+  animation: am-flow 2.8s linear infinite;
+}
+
+.am-trace {
+  stroke-dasharray: 160 1240;
+  animation: am-trace 14s linear infinite;
+}
+
+/*
+ * PERF : les boucles décoratives ne tournent que dans le viewport.
+ * `OrganicLines` bascule data-lines="idle" via un IntersectionObserver ; sans
+ * ça, 6 sections repeignaient en continu de grands tracés SVG hors écran.
+ */
+[data-lines="idle"] .am-trace,
+[data-particles="idle"] .am-float {
+  animation-play-state: paused;
+}
+
+/* ---------------------------------------------------------------------------
+   prefers-reduced-motion : on coupe tout ce qui boucle,
+   et les effets typo retombent sur un rendu statique lisible.
+--------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  body::before {
+    display: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  .am-pulse,
+  .am-float,
+  .am-rise,
+  .am-fall,
+  .am-flow,
+  .am-trace {
+    animation: none !important;
+  }
+
+  .word-energy {
+    animation: none;
+    background-position: 46% 50%;
+  }
+
+  .word-energy-glow {
+    opacity: 0.28;
+  }
+
+  .word-energy-stroke {
+    clip-path: none;
+    opacity: 0.5;
   }
 }
